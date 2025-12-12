@@ -19,5 +19,19 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    Route::get('/orders', function (Request $request) {
+        $symbol = $request->query('symbol');
+        $order = Order::query()
+                    ->when($symbol, function ($query) use ($symbol) {
+                        $query->where('symbol', $symbol);
+                    })
+                    ->where('status', 'open')
+                    ->get();
+
+        return response()->json([
+            'orders' => $order,
+        ]);
+    });
+
     Route::post('/logout', [AuthController::class, 'logout']);
 });
