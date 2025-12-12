@@ -11,5 +11,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/profile', function (Request $request) {
+        $user = auth()->user()->load('assets');
+
+        return response()->json([
+            'user' => $user->only(['id', 'name', 'email', 'balance', 'assets']),
+        ]);
+    });
+
     Route::post('/logout', [AuthController::class, 'logout']);
 });
