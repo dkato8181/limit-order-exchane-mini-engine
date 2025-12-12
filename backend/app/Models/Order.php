@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -13,6 +14,10 @@ class Order extends Model
         'quantity',
         'price',
         'status',
+    ];
+
+    protected $casts = [
+        'status' => OrderStatus::class,
     ];
 
     public function user()
