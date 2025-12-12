@@ -96,18 +96,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 201);
     });
 
-    Cancels an open order and releases locked USD or assets
     Route::post('orders/{id}/cancel', function (Order $order) {
         if($order->status !== OrderStatus::OPEN) {
             return response()->json([
                 'message' => 'Only open orders can be cancelled',
             ], 400);
         }
-        if($request->side === 'buy') {
+        if($order->side === 'buy') {
 
             $totalCost = $order->amount * $order->price;
             $newBalance = auth()->user()->balance + $totalCost;
-            DB::transaction(function () use ($newBalance, $request, $order) {
+            DB::transaction(function () use ($newBalance,$order) {
             auth()->user()->update(['balance' => $newBalance]);
             $order->status = OrderStatus::CANCELLED;
             $order->save();
