@@ -37,9 +37,10 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+            session()->regenerate();
 
             $user = Auth::user();
+            /** @var User $user */
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
