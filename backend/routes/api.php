@@ -112,6 +112,17 @@ Route::middleware('auth:sanctum')->group(function () {
             $order->save();
             });
         }
+        else{
+            DB::transaction(function () use ($order) {
+                $asset = auth()->user()->assets()->where('symbol', $order->symbol)->first();
+                if ($asset) {
+                    $asset->locked_amount -= $order->amount;
+                    $asset->save();
+                }
+                $order->status = OrderStatus::CANCELLED;
+                $order->save();
+            });
+        }
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $order,
