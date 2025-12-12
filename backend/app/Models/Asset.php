@@ -11,4 +11,8 @@ class Asset extends Model
         'type',
         'amount',
     ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
