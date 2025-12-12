@@ -2,22 +2,22 @@
   <div class="w-screen h-screen bg-gray-800 ">
     <div class="flex flex-col items-center justify-center min-h-full px-4 sm:px-6 lg:px-8">
   <h1 class="text-5xl font-bold text-white mb-6">Login</h1>
-  <form @submit.prevent="handleLogin" class="bg-gray-200 p-6">
-    <div class="my-2">
+  <form @submit.prevent="handleLogin" class="p-6">
+    <div class="my-5">
       <label for="email"  class="text-white">Email:</label>
-      <input id="email" v-model="form.email" type="email" required />
+      <input id="email" class="outline-2 outline-gray-600 ml-10.5 p-1 rounded text-white" v-model="form.email" type="email" required />
     </div>
-    <div class="my-2">
+    <div class="my-5">
       <label for="password" class="text-white">Password:</label>
-      <input id="password" v-model="form.password" type="password" required />
+      <input id="password" class="outline-2 outline-gray-600 ml-3 p-1 rounded text-white" v-model="form.password" type="password" required />
     </div>
-    <div class="my-2">
+    <div class="my-5">
       <label class="text-white">
         <input type="checkbox" v-model="form.remember" /> Remember me
       </label>
     </div>
-    <div v-if="error" class="error-message">{{ error }}</div>
-    <button type="submit" :disabled="loading">
+    <div v-if="error" class="text-red-500 mb-4">{{ error }}</div>
+    <button type="submit" :disabled="loading" class="bg-blue-500 text-white px-4 py-2 rounded">
       {{ loading ? 'Logging in...' : 'Login' }}
     </button>
   </form>
