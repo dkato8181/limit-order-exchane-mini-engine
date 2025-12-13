@@ -36,7 +36,6 @@ class OrderController extends Controller
         $order = null;
 
         if($request->side === 'buy') {
-
             $totalCost = $request->amount * $request->price;
             if ($request->user()->balance < $totalCost) {
                 return response()->json([
@@ -46,8 +45,6 @@ class OrderController extends Controller
             $newBalance = $request->user()->balance - $totalCost;
             DB::transaction(function () use ($newBalance, $request, $order) {
                 $request->user()->update(['balance' => $newBalance]);
-
-
                 $order = Order::create([
                         'user_id' => $request->user()->id,
                         'symbol' => $request->symbol,
@@ -86,15 +83,19 @@ class OrderController extends Controller
         ], 201);
     }
 
-    public function cancel(Request $request, Order $order)
+    public function cancel(Request $request, $id)
     {
-        if($order->status !== OrderStatus::OPEN) {
+        $order = Order::where('id', $id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+        if($order->status->value !== OrderStatus::OPEN->value) {
             return response()->json([
                 'message' => 'Only open orders can be cancelled',
             ], 400);
         }
-        if($order->side === 'buy') {
 
+        if($order->side === 'buy') {
             $totalCost = $order->amount * $order->price;
             $newBalance = $request->user()->balance + $totalCost;
             DB::transaction(function () use ($newBalance,$order,$request) {
@@ -114,6 +115,7 @@ class OrderController extends Controller
                 $order->save();
             });
         }
+
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $order,
