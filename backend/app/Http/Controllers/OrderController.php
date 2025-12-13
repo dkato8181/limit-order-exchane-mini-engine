@@ -24,11 +24,11 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(Request $request, $id)
+    public function store(Request $request)
     {
         $request->validate([
             'symbol' => 'required|string',
-            'type' => 'required|in:buy,sell',
+            'side' => 'required|in:buy,sell',
             'amount' => 'required|numeric',
             'price' => 'required|numeric|min:0.0001',
         ]);
@@ -45,12 +45,12 @@ class OrderController extends Controller
             }
             $newBalance = $request->user()->balance - $totalCost;
             DB::transaction(function () use ($newBalance, $request, $order) {
-            $request->user()->update(['balance' => $newBalance]);
+                $request->user()->update(['balance' => $newBalance]);
 
-            $order = Order::create([
+                $order = Order::create([
                         'user_id' => $request->user()->id,
                         'symbol' => $request->symbol,
-                        'type' => $request->type,
+                        'side' => $request->side,
                         'amount' => $request->amount,
                         'price' => $request->price,
                         'status' => OrderStatus::OPEN->value,
@@ -71,7 +71,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'user_id' => $request->user()->id,
                     'symbol' => $request->symbol,
-                    'type' => $request->type,
+                    'side' => $request->side,
                     'amount' => $request->amount,
                     'price' => $request->price,
                     'status' => OrderStatus::OPEN->value,
