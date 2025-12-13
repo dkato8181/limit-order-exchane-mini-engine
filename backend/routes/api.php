@@ -14,9 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', function (Request $request) {
         $user = $request->user()->load('assets');
 
-        return response()->json([
-            'user' => $user->only(['id', 'name', 'email', 'balance', 'assets']),
-        ]);
+        return $user->toResource();
     });
 
     Route::get('/orders', [OrderController::class, 'index']);
