@@ -12,15 +12,15 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $symbol = $request->query('symbol');
-        $order = Order::query()
+        $orders = Order::query()
                     ->when($symbol, function ($query) use ($symbol) {
                         $query->where('symbol', $symbol);
                     })
-                    ->where('status', 'open')
+                    ->where('status', OrderStatus::OPEN->value)
                     ->get();
 
         return response()->json([
-            'orders' => $order,
+            'orders' => $orders,
         ]);
     }
 
@@ -46,6 +46,7 @@ class OrderController extends Controller
             $newBalance = $request->user()->balance - $totalCost;
             DB::transaction(function () use ($newBalance, $request, $order) {
                 $request->user()->update(['balance' => $newBalance]);
+
 
                 $order = Order::create([
                         'user_id' => $request->user()->id,
