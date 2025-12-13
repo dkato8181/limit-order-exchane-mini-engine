@@ -38,17 +38,17 @@ class OrderController extends Controller
         if($request->side === 'buy') {
 
             $totalCost = $request->amount * $request->price;
-            if (auth()->user()->balance < $totalCost) {
+            if ($request->user()->balance < $totalCost) {
                 return response()->json([
                     'message' => 'Insufficient balance to place buy order',
                 ], 400);
             }
-            $newBalance = auth()->user()->balance - $totalCost;
+            $newBalance = $request->user()->balance - $totalCost;
             DB::transaction(function () use ($newBalance, $request, $order) {
-            auth()->user()->update(['balance' => $newBalance]);
+            $request->user()->update(['balance' => $newBalance]);
 
             $order = Order::create([
-                        'user_id' => auth()->id(),
+                        'user_id' => $request->user()->id,
                         'symbol' => $request->symbol,
                         'type' => $request->type,
                         'amount' => $request->amount,
@@ -59,7 +59,7 @@ class OrderController extends Controller
         }
         else {
             DB::transaction(function () use ($request) {
-                $asset = auth()->user()->assets()->where('symbol', $request->symbol)->first();
+                $asset = $request->user()->assets()->where('symbol', $request->symbol)->first();
                 if (!$asset || $asset->amount < $request->amount) {
                     return response()->json([
                         'message' => 'Insufficient asset amount to place sell order',
@@ -69,7 +69,7 @@ class OrderController extends Controller
                 $asset->save();
 
                 $order = Order::create([
-                    'user_id' => auth()->id(),
+                    'user_id' => $request->user()->id,
                     'symbol' => $request->symbol,
                     'type' => $request->type,
                     'amount' => $request->amount,
@@ -85,7 +85,7 @@ class OrderController extends Controller
         ], 201);
     }
 
-    public function cancel(Order $order)
+    public function cancel(Request $request, Order $order)
     {
         if($order->status !== OrderStatus::OPEN) {
             return response()->json([
@@ -95,16 +95,16 @@ class OrderController extends Controller
         if($order->side === 'buy') {
 
             $totalCost = $order->amount * $order->price;
-            $newBalance = auth()->user()->balance + $totalCost;
-            DB::transaction(function () use ($newBalance,$order) {
-            auth()->user()->update(['balance' => $newBalance]);
-            $order->status = OrderStatus::CANCELLED;
-            $order->save();
+            $newBalance = $request->user()->balance + $totalCost;
+            DB::transaction(function () use ($newBalance,$order,$request) {
+                $request->user()->update(['balance' => $newBalance]);
+                $order->status = OrderStatus::CANCELLED;
+                $order->save();
             });
         }
         else{
-            DB::transaction(function () use ($order) {
-                $asset = auth()->user()->assets()->where('symbol', $order->symbol)->first();
+            DB::transaction(function () use ($order, $request) {
+                $asset = $request->user()->assets()->where('symbol', $order->symbol)->first();
                 if ($asset) {
                     $asset->locked_amount -= $order->amount;
                     $asset->save();
