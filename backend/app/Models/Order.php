@@ -9,9 +9,9 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
-        'asset_id',
-        'type',
-        'quantity',
+        'symbol',
+        'side',
+        'amount',
         'price',
         'status',
     ];
