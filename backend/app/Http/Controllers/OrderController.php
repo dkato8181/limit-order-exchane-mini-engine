@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Trade;
 use App\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,7 @@ class OrderController extends Controller
                         'price' => $request->price,
                         'status' => OrderStatus::OPEN->value,
                     ]);
+                $this->matchOrders($order);
             });
         }
         else {
@@ -63,6 +65,7 @@ class OrderController extends Controller
                         'message' => 'Insufficient asset amount to place sell order',
                     ], 400);
                 }
+                $asset->amount -= $request->amount;
                 $asset->locked_amount = $request->amount;
                 $asset->save();
 
@@ -74,6 +77,7 @@ class OrderController extends Controller
                     'price' => $request->price,
                     'status' => OrderStatus::OPEN->value,
                 ]);
+                $this->matchOrders($order);
             });
         }
 
@@ -120,5 +124,80 @@ class OrderController extends Controller
             'message' => 'Order cancelled successfully',
             'order' => $order,
         ]);
+    }
+
+    private function matchOrders(Order $newOrder)
+    {
+        $matchingOrder = Order::query()
+                            ->where('symbol', $newOrder->symbol)
+                            ->where('status', OrderStatus::OPEN->value)
+                            ->where('user_id', '!=', $newOrder->user_id)
+                            ->where('amount', '=', $newOrder->amount)
+                            ->when($newOrder->side === 'buy', function ($query) use ($newOrder) {
+                                $query->where('price', '<=', $newOrder->price);
+                                $query->where('side', 'sell');
+                                $query->orderBy('price', 'asc');
+                            }, function ($query) use ($newOrder) {
+                                $query->where('price', '>=', $newOrder->price);
+                                $query->where('side', 'buy');
+                                $query->orderBy('price', 'desc');
+                            })
+                            ->get()
+                            ->first();
+        if (is_null($matchingOrder)) {
+            return;
+        }
+        //broadcast events
+        $symbol = $newOrder->symbol;
+        if($newOrder->side === 'buy') {
+            $tradePrice = min($newOrder->price, $matchingOrder->price);
+        }
+        else {
+            $tradePrice = max($newOrder->price, $matchingOrder->price);
+        }
+
+        $trade = Trade::create([
+            'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
+            'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
+            'price' => $tradePrice,
+            'amount' => $newOrder->amount,
+            'commission_rate' => 1.5
+        ]);
+
+        $commission = $trade->price * $trade->amount * $trade->commission_rate;
+        DB::transaction(function () use ($newOrder, $matchingOrder, $trade, $commission, $symbol) {
+            if($newOrder->side ==='buy') {
+                $buyerAsset = $newOrder->user()->asset('symbol', $symbol)->first();
+                $buyerAsset->amount += $trade->amount;
+                $buyerAsset->save();
+
+                $sellerAsset = $matchingOrder->user()->asset('symbol', $symbol)->first();
+                $sellerAsset->locked_amount -= $trade->amount;
+                $sellerAsset->save();
+
+                $seller = $matchingOrder->user;;
+                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
+                $seller->balance += $sellerProceeds;
+                $seller->save();
+            }
+            else {
+                $buyerAsset = $matchingOrder->user()->asset('symbol', $symbol)->first();
+                $buyerAsset->amount += $trade->amount;
+                $buyerAsset->save();
+
+                $sellerAsset = $newOrder->user()->asset('symbol', $symbol)->first();
+                $sellerAsset->locked_amount -= $trade->amount;
+                $sellerAsset->save();
+
+                $seller = $newOrder->user();
+                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
+                $seller->balance += $sellerProceeds;
+                $seller->save();
+            }
+            $newOrder->status = OrderStatus::FILLED->value;
+            $matchingOrder->status = OrderStatus::FILLED->value;
+            $newOrder->save();
+            $matchingOrder->save();
+        });
     }
 }
