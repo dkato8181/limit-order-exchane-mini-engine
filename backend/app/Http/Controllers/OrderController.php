@@ -113,6 +113,7 @@ class OrderController extends Controller
                 $asset = $request->user()->assets()->where('symbol', $order->symbol)->first();
                 if ($asset) {
                     $asset->locked_amount -= $order->amount;
+                    $asset->amount += $order->amount;
                     $asset->save();
                 }
                 $order->status = OrderStatus::CANCELLED;
