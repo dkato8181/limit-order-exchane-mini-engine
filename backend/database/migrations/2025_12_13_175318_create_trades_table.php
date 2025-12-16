@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('sell_order_id')->constrained('orders')->onDelete('cascade');
             $table->decimal('price', 12, 2);
             $table->decimal('amount', 12, 2);
-            $table->decimal('commission_rate', 2, 2);
+            $table->decimal('commission_rate', 5, 2);
             $table->timestamps();
         });
     }
