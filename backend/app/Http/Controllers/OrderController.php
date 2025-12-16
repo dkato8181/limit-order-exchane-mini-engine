@@ -176,20 +176,20 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-        $trade = Trade::create([
-            'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
-            'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
-            'price' => $tradePrice,
-            'amount' => $newOrder->amount,
-            'commission_rate' => 1.5
-        ]);
+            $trade = Trade::create([
+                'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
+                'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
+                'price' => $tradePrice,
+                'amount' => $newOrder->amount,
+                'commission_rate' => 1.5
+            ]);
             $commission = $trade->price * $trade->amount * ($trade->commission_rate / 100);
             if($newOrder->side ==='buy') {
-                $buyerAsset = $newOrder->user()->asset('symbol', $symbol)->first();
+                $buyerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
                 $buyerAsset->amount += $trade->amount;
                 $buyerAsset->save();
 
-                $sellerAsset = $matchingOrder->user()->asset('symbol', $symbol)->first();
+                $sellerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
                 $sellerAsset->locked_amount -= $trade->amount;
                 $sellerAsset->save();
 
@@ -199,15 +199,15 @@ class OrderController extends Controller
                 $seller->save();
             }
             else {
-                $buyerAsset = $matchingOrder->user()->asset('symbol', $symbol)->first();
+                $buyerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
                 $buyerAsset->amount += $trade->amount;
                 $buyerAsset->save();
 
-                $sellerAsset = $newOrder->user()->asset('symbol', $symbol)->first();
+                $sellerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
                 $sellerAsset->locked_amount -= $trade->amount;
                 $sellerAsset->save();
 
-                $seller = $newOrder->user();
+                $seller = $newOrder->user;
                 $sellerProceeds = ($trade->price * $trade->amount) - $commission;
                 $seller->balance += $sellerProceeds;
                 $seller->save();
