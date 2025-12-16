@@ -7,6 +7,7 @@ use App\Models\Trade;
 use App\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -44,7 +45,8 @@ class OrderController extends Controller
                 ], 400);
             }
             $newBalance = $request->user()->balance - $totalCost;
-            DB::transaction(function () use ($newBalance, $request, $order) {
+            DB::beginTransaction();
+            try {
                 $request->user()->update(['balance' => $newBalance]);
                 $order = Order::create([
                         'user_id' => $request->user()->id,
@@ -54,11 +56,19 @@ class OrderController extends Controller
                         'price' => $request->price,
                         'status' => OrderStatus::OPEN->value,
                     ]);
+                    DB::commit();
                 $this->matchOrders($order);
-            });
+            }
+            catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Failed to place buy order '. $e->getMessage(),
+                ], 500);
+            }
         }
         else {
-            DB::transaction(function () use ($request) {
+            DB::beginTransaction();
+            try {
                 $asset = $request->user()->assets()->where('symbol', $request->symbol)->first();
                 if (!$asset || $asset->amount < $request->amount) {
                     return response()->json([
@@ -77,8 +87,15 @@ class OrderController extends Controller
                     'price' => $request->price,
                     'status' => OrderStatus::OPEN->value,
                 ]);
+                DB::commit();
                 $this->matchOrders($order);
-            });
+            }
+            catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Failed to place sell order '.$e->getMessage(),
+                ], 500);
+            }
         }
 
         return response()->json([
@@ -157,6 +174,8 @@ class OrderController extends Controller
             $tradePrice = max($newOrder->price, $matchingOrder->price);
         }
 
+        DB::beginTransaction();
+        try {
         $trade = Trade::create([
             'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
             'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
@@ -164,9 +183,7 @@ class OrderController extends Controller
             'amount' => $newOrder->amount,
             'commission_rate' => 1.5
         ]);
-
-        $commission = $trade->price * $trade->amount * $trade->commission_rate;
-        DB::transaction(function () use ($newOrder, $matchingOrder, $trade, $commission, $symbol) {
+            $commission = $trade->price * $trade->amount * ($trade->commission_rate / 100);
             if($newOrder->side ==='buy') {
                 $buyerAsset = $newOrder->user()->asset('symbol', $symbol)->first();
                 $buyerAsset->amount += $trade->amount;
@@ -199,6 +216,12 @@ class OrderController extends Controller
             $matchingOrder->status = OrderStatus::FILLED->value;
             $newOrder->save();
             $matchingOrder->save();
-        });
+            DB::commit();
+        }
+        catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Trade matching failed: ' . $e->getMessage());
+            return;
+        }
     }
 }
