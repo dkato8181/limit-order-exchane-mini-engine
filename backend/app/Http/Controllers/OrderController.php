@@ -26,7 +26,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
         $request->validate([
             'symbol' => 'required|string',
