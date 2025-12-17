@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Models\Trade;
 use App\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use OrderService;
+use Symfony\Component\HttpKernel\HttpCache\Store;
 
 class OrderController extends Controller
 {
@@ -28,80 +31,28 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request)
     {
-        $request->validate([
-            'symbol' => 'required|string',
-            'side' => 'required|in:buy,sell',
-            'amount' => 'required|numeric',
-            'price' => 'required|numeric|min:0.0001',
-        ]);
+        $orderService = new OrderService();
 
-        $order = null;
-
-        if($request->side === 'buy') {
-            $totalCost = $request->amount * $request->price;
-            if ($request->user()->balance < $totalCost) {
-                return response()->json([
-                    'message' => 'Insufficient balance to place buy order',
-                ], 400);
-            }
-            $newBalance = $request->user()->balance - $totalCost;
-            DB::beginTransaction();
-            try {
-                $request->user()->update(['balance' => $newBalance]);
-                $order = Order::create([
-                        'user_id' => $request->user()->id,
-                        'symbol' => $request->symbol,
-                        'side' => $request->side,
-                        'amount' => $request->amount,
-                        'price' => $request->price,
-                        'status' => OrderStatus::OPEN->value,
-                    ]);
-                    DB::commit();
-                $this->matchOrders($order);
-            }
-            catch (\Exception $e) {
-                DB::rollBack();
-                return response()->json([
-                    'message' => 'Failed to place buy order '. $e->getMessage(),
-                ], 500);
-            }
+        try {
+            $orderService->canPlaceOrder($request->user(), $request->all());
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
         }
-        else {
-            DB::beginTransaction();
-            try {
-                $asset = $request->user()->assets()->where('symbol', $request->symbol)->first();
-                if (!$asset || $asset->amount < $request->amount) {
-                    return response()->json([
-                        'message' => 'Insufficient asset amount to place sell order',
-                    ], 400);
-                }
-                $asset->amount -= $request->amount;
-                $asset->locked_amount = $request->amount;
-                $asset->save();
 
-                $order = Order::create([
-                    'user_id' => $request->user()->id,
-                    'symbol' => $request->symbol,
-                    'side' => $request->side,
-                    'amount' => $request->amount,
-                    'price' => $request->price,
-                    'status' => OrderStatus::OPEN->value,
-                ]);
-                DB::commit();
-                $this->matchOrders($order);
-            }
-            catch (\Exception $e) {
-                DB::rollBack();
-                return response()->json([
-                    'message' => 'Failed to place sell order '.$e->getMessage(),
-                ], 500);
-            }
+        $order = $orderService->createOrder($request->user(), $request->all());
+
+        if(!$order) {
+            return response()->json([
+                'message' => 'Failed to place order',
+            ], 500);
         }
 
         return response()->json([
-            'message' => 'Order placed successfully',
+            'message' => 'Order cancelled successfully',
             'order' => $order,
-        ], 201);
+        ]);
     }
 
     public function cancel(Request $request, $id)
@@ -116,112 +67,18 @@ class OrderController extends Controller
             ], 400);
         }
 
-        if($order->side === 'buy') {
-            $totalCost = $order->amount * $order->price;
-            $newBalance = $request->user()->balance + $totalCost;
-            DB::transaction(function () use ($newBalance,$order,$request) {
-                $request->user()->update(['balance' => $newBalance]);
-                $order->status = OrderStatus::CANCELLED;
-                $order->save();
-            });
-        }
-        else{
-            DB::transaction(function () use ($order, $request) {
-                $asset = $request->user()->assets()->where('symbol', $order->symbol)->first();
-                if ($asset) {
-                    $asset->locked_amount -= $order->amount;
-                    $asset->amount += $order->amount;
-                    $asset->save();
-                }
-                $order->status = OrderStatus::CANCELLED;
-                $order->save();
-            });
+        $orderService = new OrderService();
+        $orderCancelled = $orderService->cancelOrder($request->user(), $order);
+
+        if(!$orderCancelled) {
+            return response()->json([
+                'message' => 'Failed to cancel order',
+            ], 500);
         }
 
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $order,
         ]);
-    }
-
-    private function matchOrders(Order $newOrder)
-    {
-        $matchingOrder = Order::query()
-                            ->where('symbol', $newOrder->symbol)
-                            ->where('status', OrderStatus::OPEN->value)
-                            ->where('user_id', '!=', $newOrder->user_id)
-                            ->where('amount', '=', $newOrder->amount)
-                            ->when($newOrder->side === 'buy', function ($query) use ($newOrder) {
-                                $query->where('price', '<=', $newOrder->price);
-                                $query->where('side', 'sell');
-                                $query->orderBy('price', 'asc');
-                            }, function ($query) use ($newOrder) {
-                                $query->where('price', '>=', $newOrder->price);
-                                $query->where('side', 'buy');
-                                $query->orderBy('price', 'desc');
-                            })
-                            ->get()
-                            ->first();
-        if (is_null($matchingOrder)) {
-            return;
-        }
-        //broadcast events
-        $symbol = $newOrder->symbol;
-        if($newOrder->side === 'buy') {
-            $tradePrice = min($newOrder->price, $matchingOrder->price);
-        }
-        else {
-            $tradePrice = max($newOrder->price, $matchingOrder->price);
-        }
-
-        DB::beginTransaction();
-        try {
-            $trade = Trade::create([
-                'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
-                'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
-                'price' => $tradePrice,
-                'amount' => $newOrder->amount,
-                'commission_rate' => 1.5
-            ]);
-            $commission = $trade->price * $trade->amount * ($trade->commission_rate / 100);
-            if($newOrder->side ==='buy') {
-                $buyerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
-                $buyerAsset->amount += $trade->amount;
-                $buyerAsset->save();
-
-                $sellerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
-                $sellerAsset->locked_amount -= $trade->amount;
-                $sellerAsset->save();
-
-                $seller = $matchingOrder->user;;
-                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
-                $seller->balance += $sellerProceeds;
-                $seller->save();
-            }
-            else {
-                $buyerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
-                $buyerAsset->amount += $trade->amount;
-                $buyerAsset->save();
-
-                $sellerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
-                $sellerAsset->locked_amount -= $trade->amount;
-                $sellerAsset->save();
-
-                $seller = $newOrder->user;
-                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
-                $seller->balance += $sellerProceeds;
-                $seller->save();
-            }
-            $newOrder->status = OrderStatus::FILLED->value;
-            $matchingOrder->status = OrderStatus::FILLED->value;
-            $newOrder->save();
-            $matchingOrder->save();
-            DB::commit();
-        }
-        catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Trade matching failed: ' . $e->getMessage());
-            return;
-        }
     }
 }
