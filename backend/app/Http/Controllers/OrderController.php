@@ -55,6 +55,12 @@ class OrderController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->first();
 
+        if(is_null($order)) {
+            return response()->json([
+                'message' => 'Order not found',
+            ], 400);
+        }
+
         if($order->status->value !== OrderStatus::OPEN->value) {
             return response()->json([
                 'message' => 'Only open orders can be cancelled',
