@@ -25,10 +25,8 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(StoreOrderRequest $request)
+    public function store(StoreOrderRequest $request, OrderService $orderService)
     {
-        $orderService = new OrderService();
-
         try {
             $orderService->canPlaceOrder($request->user(), $request->all());
         } catch (\Exception $e) {
@@ -51,7 +49,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function cancel(Request $request, $id)
+    public function cancel(Request $request, $id, OrderService $orderService)
     {
         $order = Order::where('id', $id)
                 ->where('user_id', $request->user()->id)
@@ -63,7 +61,6 @@ class OrderController extends Controller
             ], 400);
         }
 
-        $orderService = new OrderService();
         $orderCancelled = $orderService->cancelOrder($request->user(), $order);
 
         if(!$orderCancelled) {
