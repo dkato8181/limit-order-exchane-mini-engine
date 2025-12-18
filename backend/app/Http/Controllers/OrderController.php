@@ -4,13 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
-use App\Models\Trade;
 use App\OrderStatus;
+use App\Services\OrderService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use OrderService;
-use Symfony\Component\HttpKernel\HttpCache\Store;
 
 class OrderController extends Controller
 {
