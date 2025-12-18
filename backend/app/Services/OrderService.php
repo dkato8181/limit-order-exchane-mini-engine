@@ -2,6 +2,7 @@
 
 use App\Models\Order;
 use App\Models\Trade;
+use App\Models\User;
 use App\OrderStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,10 +35,11 @@ class OrderService
         DB::beginTransaction();
 
         try {
+            $lockedUser = User::lockForUpdate()->find($user->id);
             if ($orderData['side'] === 'buy') {
-                $user->decrement('balance', $totalCost);
+                $lockedUser->decrement('balance', $totalCost);
             } else if ($orderData['side'] === 'sell') {
-                $asset = $user->assets()?->where('symbol', $orderData['symbol'])?->first();
+                $asset = $lockedUser->assets()?->where('symbol', $orderData['symbol'])?->lockForUpdate()?->first();
                 $asset->increment('locked_amount', $orderData['amount']);
                 $asset->decrement('amount', $orderData['amount']);
             }
@@ -59,10 +61,11 @@ class OrderService
         DB::beginTransaction();
 
         try {
+            $lockedUser = User::lockForUpdate()->find($user->id);
             if ($order['side'] === 'buy') {
-                $user->increment('balance', $totalCost);
+                $lockedUser->increment('balance', $totalCost);
             } else if ($order['side'] === 'sell') {
-                $asset = $user->assets()?->where('symbol', $order['symbol'])?->first();
+                $asset = $lockedUser->assets()?->where('symbol', $order['symbol'])?->lockForUpdate()?->first();
                 $asset->decrement('locked_amount', $order['amount']);
                 $asset->increment('amount', $order['amount']);
             }
