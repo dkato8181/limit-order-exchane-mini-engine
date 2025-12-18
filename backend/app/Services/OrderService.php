@@ -6,9 +6,12 @@ use App\Models\User;
 use App\OrderStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Ramsey\Uuid\Type\Decimal;
 
 class OrderService
 {
+    public static $commisionRate = 1.5;
+
     public function canPlaceOrder($user, $orderData)
     {
         $totalCost = $orderData['amount'] * $orderData['price'];
@@ -84,7 +87,7 @@ class OrderService
 
     private function matchOrders(Order $newOrder)
     {
-        $matchingOrder = Order::query()
+        $existingOrder = Order::query()
                             ->where('symbol', $newOrder->symbol)
                             ->where('status', OrderStatus::OPEN->value)
                             ->where('user_id', '!=', $newOrder->user_id)
@@ -100,66 +103,59 @@ class OrderService
                             })
                             ->get()
                             ->first();
-        if (is_null($matchingOrder)) {
+
+        if (is_null($existingOrder)) {
             return;
         }
-        //broadcast events
-        $symbol = $newOrder->symbol;
-        if($newOrder->side === 'buy') {
-            $tradePrice = min($newOrder->price, $matchingOrder->price);
-        }
-        else {
-            $tradePrice = max($newOrder->price, $matchingOrder->price);
-        }
 
+        $buyOrder = $newOrder->side === 'buy' ? $newOrder : $existingOrder;
+        $sellOrder = $newOrder->side === 'sell' ? $newOrder : $existingOrder;
+
+        $tradePrice = $newOrder->side === 'buy' ? min($newOrder->price, $existingOrder->price) : max($newOrder->price, $existingOrder->price);
+
+        $this->settleOrder($buyOrder, $sellOrder, $tradePrice, $newOrder->amount);
+    }
+
+    private function settleOrder(Order $buyOrder, Order $sellOrder, Decimal $tradePrice, Decimal $tradeAmount)
+    {
         DB::beginTransaction();
         try {
-            $trade = Trade::create([
-                'buy_order_id' => $newOrder->side === 'buy' ? $newOrder->id : $matchingOrder->id,
-                'sell_order_id' => $newOrder->side === 'sell' ? $newOrder->id : $matchingOrder->id,
+            $buyOrder = Order::lockForUpdate()->find($buyOrder->id);
+            $sellOrder = Order::lockForUpdate()->find($sellOrder->id);
+
+            $buyerAsset = $buyOrder->user->assets()->where('symbol', $buyOrder->symbol)->lockForUpdate()->first();
+            $buyerAsset->amount += $tradeAmount;
+            $buyerAsset->save();
+
+            $sellerAsset = $sellOrder->user->assets()->where('symbol', $sellOrder->symbol)->lockForUpdate()->first();
+            $sellerAsset->locked_amount -= $tradeAmount;
+            $sellerAsset->save();
+
+            $seller = User::lockForUpdate()->find($sellOrder->user->id);
+            $sellerProceeds = ($tradePrice * $tradeAmount) - ($tradePrice * $tradeAmount * (OrderService::$commisionRate / 100));
+            $seller->balance += $sellerProceeds;
+            $seller->save();
+
+            $buyOrder->status = OrderStatus::FILLED->value;
+            $sellOrder->status = OrderStatus::FILLED->value;
+            $buyOrder->save();
+            $sellOrder->save();
+
+            Trade::create([
+                'buy_order_id' => $buyOrder->id,
+                'sell_order_id' => $sellOrder->id,
                 'price' => $tradePrice,
-                'amount' => $newOrder->amount,
-                'commission_rate' => 1.5
+                'amount' => $tradeAmount,
+                'commission_rate' => OrderService::$commisionRate,
             ]);
-            $commission = $trade->price * $trade->amount * ($trade->commission_rate / 100);
-            if($newOrder->side ==='buy') {
-                $buyerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
-                $buyerAsset->amount += $trade->amount;
-                $buyerAsset->save();
 
-                $sellerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
-                $sellerAsset->locked_amount -= $trade->amount;
-                $sellerAsset->save();
-
-                $seller = $matchingOrder->user;;
-                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
-                $seller->balance += $sellerProceeds;
-                $seller->save();
-            }
-            else {
-                $buyerAsset = $matchingOrder->user->assets()->where('symbol', $symbol)->first();
-                $buyerAsset->amount += $trade->amount;
-                $buyerAsset->save();
-
-                $sellerAsset = $newOrder->user->assets()->where('symbol', $symbol)->first();
-                $sellerAsset->locked_amount -= $trade->amount;
-                $sellerAsset->save();
-
-                $seller = $newOrder->user;
-                $sellerProceeds = ($trade->price * $trade->amount) - $commission;
-                $seller->balance += $sellerProceeds;
-                $seller->save();
-            }
-            $newOrder->status = OrderStatus::FILLED->value;
-            $matchingOrder->status = OrderStatus::FILLED->value;
-            $newOrder->save();
-            $matchingOrder->save();
             DB::commit();
         }
         catch (\Exception $e) {
             DB::rollBack();
             Log::error('Trade matching failed: ' . $e->getMessage());
-            return;
         }
+
+        return;
     }
 }
