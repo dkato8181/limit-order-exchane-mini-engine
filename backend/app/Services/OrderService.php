@@ -9,11 +9,10 @@ use App\OrderStatus;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Ramsey\Uuid\Type\Decimal;
 
 class OrderService
 {
-    public static $commisionRate = 1.5;
+    public static string $commisionRate = "1.5";
 
     public function canPlaceOrder($user, $orderData)
     {
@@ -43,11 +42,11 @@ class OrderService
         try {
             $lockedUser = User::lockForUpdate()->find($user->id);
             if ($orderData['side'] === 'buy') {
-                $lockedUser->decrement('balance', $totalCost);
+                $lockedUser->balance = bcsub($lockedUser->balance, $totalCost, 8);
             } else if ($orderData['side'] === 'sell') {
                 $asset = $lockedUser->assets()?->where('symbol', $orderData['symbol'])?->lockForUpdate()?->first();
-                $asset->increment('locked_amount', $orderData['amount']);
-                $asset->decrement('amount', $orderData['amount']);
+                $asset->locked_amount = bcadd($asset->locked_amount, $orderData['amount'], 8);
+                $asset->amount = bcsub($asset->amount, $orderData['amount'], 8);
             }
             $order = Order::create($order);
             DB::commit();
@@ -69,11 +68,11 @@ class OrderService
         try {
             $lockedUser = User::lockForUpdate()->find($user->id);
             if ($order['side'] === 'buy') {
-                $lockedUser->increment('balance', $totalCost);
+                $lockedUser->balance = bcadd($lockedUser->balance, $totalCost, 8);
             } else if ($order['side'] === 'sell') {
                 $asset = $lockedUser->assets()?->where('symbol', $order['symbol'])?->lockForUpdate()?->first();
-                $asset->decrement('locked_amount', $order['amount']);
-                $asset->increment('amount', $order['amount']);
+                $asset->locked_amount = bcsub($asset->locked_amount, $order['amount'], 8);
+                $asset->amount = bcadd($asset->amount, $order['amount'], 8);
             }
             $order->status = OrderStatus::CANCELLED;
             $order->save();
@@ -119,7 +118,7 @@ class OrderService
         $this->settleOrder($buyOrder, $sellOrder, $tradePrice, $newOrder->amount);
     }
 
-    private function settleOrder(Order $buyOrder, Order $sellOrder, Decimal $tradePrice, Decimal $tradeAmount)
+    private function settleOrder(Order $buyOrder, Order $sellOrder, string $tradePrice, string $tradeAmount)
     {
         DB::beginTransaction();
         try {
@@ -127,16 +126,18 @@ class OrderService
             $sellOrder = Order::lockForUpdate()->find($sellOrder->id);
 
             $buyerAsset = $buyOrder->user->assets()->where('symbol', $buyOrder->symbol)->lockForUpdate()->first();
-            $buyerAsset->amount += $tradeAmount;
+            $buyerAsset->amount = bcadd($buyerAsset->amount, $tradeAmount);
             $buyerAsset->save();
 
             $sellerAsset = $sellOrder->user->assets()->where('symbol', $sellOrder->symbol)->lockForUpdate()->first();
-            $sellerAsset->locked_amount -= $tradeAmount;
+            $sellerAsset->locked_amount = bcsub($sellerAsset->locked_amount, $tradeAmount);
             $sellerAsset->save();
 
             $seller = User::lockForUpdate()->find($sellOrder->user->id);
-            $sellerProceeds = ($tradePrice * $tradeAmount) - ($tradePrice * $tradeAmount * (OrderService::$commisionRate / 100));
-            $seller->balance += $sellerProceeds;
+            $gross = bcmul($tradePrice, $tradeAmount, 8);
+            $rate  = bcdiv(OrderService::$commisionRate, "100", 8);
+            $sellerProceeds = bcsub($gross, bcmul($gross, $rate, 8));
+            $seller->balance = bcadd($seller->balance, $sellerProceeds, 8);
             $seller->save();
 
             $buyOrder->status = OrderStatus::FILLED->value;

@@ -17,6 +17,9 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'price' => 'decimal:8',
+        'amount' => 'decimal:8',
+        'commission_rate' => 'decimal:2',
         'status' => OrderStatus::class,
     ];
 
