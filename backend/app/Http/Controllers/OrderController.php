@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\OrderMatched;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
+use App\Models\Trade;
 use App\OrderStatus;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
@@ -78,6 +80,40 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $order,
+        ]);
+    }
+
+    public function broadcast($id)
+    {
+        $trade = Trade::find($id)->load(['buyOrder.user.assets', 'sellOrder.user.assets']);
+        $buyer = $trade->buyOrder->user;
+        $seller = $trade->sellOrder->user;
+        $symbol = $trade->buyOrder->symbol;
+        $data = [
+            $buyer->id => [
+                'balance' => $buyer->balance,
+                'asset' => $buyer->assets->where('symbol', '==', $symbol)->map(function ($asset) {
+                    return [
+                        'symbol' => $asset->symbol,
+                        'amount' => $asset->amount,
+                        'locked_amount' => $asset->locked_amount,
+                    ];
+                })->toArray(),
+            ],
+            $seller->id => [
+                'balance' => $seller->balance,
+                'asset' => $seller->assets->where('symbol', '==', $symbol)->map(function ($asset) {
+                    return [
+                        'symbol' => $asset->symbol,
+                        'amount' => $asset->amount,
+                        'locked_amount' => $asset->locked_amount,
+                    ];
+                })->toArray(),
+            ],
+        ];
+        OrderMatched::dispatch($trade);
+        return response()->json([
+            'message' => 'Trade broadcasted successfully',
         ]);
     }
 }
