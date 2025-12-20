@@ -5,15 +5,16 @@
   <form @submit.prevent="handleLogin" class="p-6">
     <div class="my-5">
       <label for="email"  class="text-white">Email:</label>
-      <input id="email" class="outline-2 outline-gray-600 ml-10.5 p-1 rounded text-white" v-model="form.email" type="email" required />
+      <input id="email" class="outline-2 outline-gray-600 ml-10.5 p-1 rounded text-white" v-model="email" type="email" required />
     </div>
     <div class="my-5">
       <label for="password" class="text-white">Password:</label>
-      <input id="password" class="outline-2 outline-gray-600 ml-3 p-1 rounded text-white" v-model="form.password" type="password" required />
+      <input id="password" class="outline-2 outline-gray-600 ml-3 p-1 rounded text-white" v-model="password" type="password" required />
     </div>
     <div class="my-5">
       <label class="text-white">
-        <input type="checkbox" v-model="form.remember" /> Remember me
+        <input type="checkbox" v-model="remember" class="mr-2" />
+        Remember Me{{ remember }}
       </label>
     </div>
     <div v-if="error" class="text-red-500 mb-4">{{ error }}</div>
@@ -33,11 +34,9 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const form = ref({
-  email: '',
-  password: '',
-  remember: false
-})
+const email = ref('')
+const password = ref('')
+const remember = ref(false)
 
 const error = ref('')
 const loading = ref(false)
@@ -45,16 +44,18 @@ const showPassword = ref(false)
 
 async function handleLogin() {
   try {
+    authStore.credentials.email = email.value
+    authStore.credentials.password = password.value
+    authStore.credentials.remember = remember.value
     error.value = ''
     loading.value = true
     
-    await authStore.login({
-      email: form.value.email,
-      password: form.value.password
-    })
+    await authStore.login()
     
     router.push('/dashboard')
   } catch (err) {
+    console.log(err);
+    
     error.value = err.errors?.email?.[0] || err.message || 'Login failed. Please check your credentials.'
   } finally {
     loading.value = false

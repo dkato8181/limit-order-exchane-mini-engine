@@ -5,7 +5,7 @@ import Register from '@/views/Register.vue'
 import Dashboard from '@/views/Dashboard.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
     {
       path: '/',
@@ -34,19 +34,24 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  const isAuthenticated = authStore.isAuthenticated();
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    try {
-      await authStore.fetchUser()
-      next()
-    } catch {
-      next('/login')
-    }
-  } else if (to.meta.guest && authStore.isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
+  console.log("Navigating to:", to.path, "Auth:", isAuthenticated)
+
+  if ((to.meta.guest || to.path === '/login' || to.path === '/register') && isAuthenticated) {
+    return next('/dashboard')
   }
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next('/login')
+  }
+
+  if (to.path === '/logout') {
+    await authStore.logout();
+    return next('/login');
+  }
+
+  next()
 })
 
 export default router
