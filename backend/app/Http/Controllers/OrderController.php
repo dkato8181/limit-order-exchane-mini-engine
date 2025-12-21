@@ -15,11 +15,18 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $symbol = $request->query('symbol');
+        $status = $request->query('status');
+        $userId = $request->query('user_id');
         $orders = Order::query()
                     ->when($symbol, function ($query) use ($symbol) {
                         $query->where('symbol', $symbol);
+                        })
+                    ->when($status, function ($query) use ($status) {
+                        $query->where('status', $status);
                     })
-                    ->where('status', OrderStatus::OPEN->value)
+                    ->when($userId, function ($query) use ($userId) {
+                        $query->where('user_id', $userId);
+                    })
                     ->get();
 
         return response()->json([

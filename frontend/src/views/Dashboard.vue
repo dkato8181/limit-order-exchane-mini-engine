@@ -28,7 +28,9 @@
           Orders
         </h1>
         <ol>
-          <li v-for="order in ordersStore.orders" :key="order.id">{{ order.symbol}} | {{ order.side }} | Amount: {{ order.amount }} | Price: {{ order.price }}</li>
+          <li v-for="order in ordersStore.orders" :key="order.id">
+            {{ order.symbol}} | {{ order.side }} | Amount: {{ order.amount }} | Price: {{ order.price }} | Status: {{ order.status }}
+          </li>
         </ol>
       </div>
       <div class="bg-red-200 col-span-2 border-dashed border border-red-500 pl-5">
@@ -36,9 +38,9 @@
           Order Book
         </h1>
         <ol>
-          <li>A</li>
-          <li>B</li>
-          <li>C</li>
+          <li v-for="order in ordersStore.orderBook" :key="order.id">
+            {{ order.symbol}} | {{ order.side }} | Amount: {{ order.amount }} | Price: {{ order.price }} | Status: {{ order.status }}
+          </li>
         </ol>
       </div>
     </div>
@@ -54,6 +56,7 @@ const ordersStore = useOrdersStore();
 onMounted(async () => {
   await profileStore.loadProfile();
   await ordersStore.loadOrders();
+  await ordersStore.loadOrderBook('XRP', 1);
 });
 
 </script>
