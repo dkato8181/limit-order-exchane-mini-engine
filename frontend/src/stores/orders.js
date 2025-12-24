@@ -5,6 +5,9 @@ import api from '@/api/axios'
 export const useOrdersStore = defineStore('orders', () => {
   const orders = ref([]);
   const orderBook = ref([]);
+  const isLoading = ref(false);
+  const error = ref('');
+  const fieldErrors = ref({});
 
   async function loadOrders() {
     const response = await api.get('/api/orders');
@@ -25,6 +28,9 @@ export const useOrdersStore = defineStore('orders', () => {
   return {
     orders,
     orderBook,
+    isLoading,
+    error,
+    fieldErrors,
     loadOrders,
     loadOrderBook,
   };
