@@ -4,11 +4,14 @@
       <span class="text-white font-bold text-3xl mx-2 my-2">
         LOEME
       </span>
-      <button class="text-white rounded-2xl px-5 bg-blue-800">
-        Logout
-      </button>
+      <div>
+        <span class="text-2xl font-bold mr-2">{{ profileStore.profile.name }}</span>
+        <button class="h-full text-white rounded-2xl px-5 bg-blue-700">
+          Logout
+        </button>
+      </div>
     </header>
-    <div class="grid grid-cols-2 gap-4 w-8/10 mx-auto">
+    <div class="grid grid-cols-2 gap-4 min-w-5/10 mx-auto">
       <div class="bg-red-300 border-2 border-solid border-red-500 p-10 text-2xl text-green-600 text-center">
         Assets: {{ profileStore.profile.assets?.length }}
       </div>
