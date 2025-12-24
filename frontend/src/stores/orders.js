@@ -8,6 +8,13 @@ export const useOrdersStore = defineStore('orders', () => {
   const isLoading = ref(false);
   const error = ref('');
   const fieldErrors = ref({});
+  const availableAssets = ref([]);
+
+  async function loadAvailableAssets() {
+    const response = await api.get('/api/available-assets');
+    console.log("Available assests response:",response.data.assets);
+    availableAssets.value = response.data.assets;
+  }
 
   async function loadOrders() {
     const response = await api.get('/api/orders');
@@ -31,6 +38,8 @@ export const useOrdersStore = defineStore('orders', () => {
     isLoading,
     error,
     fieldErrors,
+    availableAssets,
+    loadAvailableAssets,
     loadOrders,
     loadOrderBook,
   };

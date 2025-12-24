@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\OrderMatched;
 use App\Http\Requests\StoreOrderRequest;
+use App\Models\Asset;
 use App\Models\Order;
 use App\Models\Trade;
 use App\OrderStatus;
@@ -87,6 +88,17 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $order,
+        ]);
+    }
+
+    public function availableAssets()
+    {
+        $assets = Asset::query()
+            ->distinct()
+            ->pluck('symbol');
+
+        return response()->json([
+            'assets' => $assets
         ]);
     }
 
