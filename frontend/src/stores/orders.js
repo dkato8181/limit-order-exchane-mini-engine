@@ -32,6 +32,32 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+  async function placeOrder(orderData) {
+    try{
+      isLoading.value = true
+      error.value = '';
+      fieldErrors.value = {};
+      const response = await api.post('/api/orders', orderData);
+      console.log("Place order response:", response);
+      if (response.status === 200) {
+        console.log("Order placed successfully");
+      }
+    }
+    catch (err) {
+      if(err.response?.status === 422){
+        fieldErrors.value = err.response.data.errors || {};
+        error.value = 'Please fix the validation errors below';
+      }
+      else {
+        error.value = err.response?.data?.message || 'Failed to place order';
+      }
+      console.log('Place order error', err)
+    }
+    finally{
+      isLoading.value = false
+    }
+  }
+
   return {
     orders,
     orderBook,
@@ -42,5 +68,6 @@ export const useOrdersStore = defineStore('orders', () => {
     loadAvailableAssets,
     loadOrders,
     loadOrderBook,
+    placeOrder,
   };
 });
