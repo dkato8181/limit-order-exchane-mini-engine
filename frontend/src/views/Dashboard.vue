@@ -57,6 +57,7 @@ import { useOrdersStore } from '@/stores/orders';
 const profileStore = useProfileStore();
 const ordersStore = useOrdersStore();
 onMounted(async () => {
+  document.title = 'Dashboard - LOEME';
   await profileStore.loadProfile();
   await ordersStore.loadOrders();
   await ordersStore.loadOrderBook('XRP', 1);

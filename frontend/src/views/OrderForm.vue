@@ -88,6 +88,7 @@ const profileStore = useProfileStore();
 const ordersStore = useOrdersStore();
 
 onMounted(async () => {
+  document.title = 'New Order - LOEME';
   await profileStore.loadProfile();
   await ordersStore.loadAvailableAssets();
 });
