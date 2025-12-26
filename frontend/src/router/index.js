@@ -4,13 +4,15 @@ import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import OrderForm from '@/views/OrderForm.vue'
+import MainLayout from '@/views/MainLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/dashboard'
+      redirect: '/dashboard',
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',
@@ -25,16 +27,22 @@ const router = createRouter({
       meta: { guest: true }
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: Dashboard,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/order-form',
-      name: 'orderform',
-      component: OrderForm,
-      meta: { requiresAuth: true }
+      path: '/',
+      name: 'main',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '/dashboard',
+          name: 'dashboard',
+          component: Dashboard,
+        },
+        {
+          path: '/order-form',
+          name: 'orderform',
+          component: OrderForm,
+        }
+      ]
     }
   ]
 })
