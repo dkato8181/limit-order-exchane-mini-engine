@@ -24,8 +24,8 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  async function loadOrderBook(symbol, status=1) {
-    const response = await api.get('/api/orders', { params: { symbol:symbol, status: status } });
+  async function loadOrderBook(symbol, status=1, userId) {
+    const response = await api.get('/api/orders', { params: { symbol:symbol, status: status, user_id: userId } });
     console.log("Order book response:", response);
     if (response.data.success) {
       orderBook.value = response.data.data;

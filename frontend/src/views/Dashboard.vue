@@ -60,7 +60,7 @@ onMounted(async () => {
   document.title = 'Dashboard - LOEME';
   await profileStore.loadProfile();
   await ordersStore.loadOrders();
-  await ordersStore.loadOrderBook('XRP', 1);
+  await ordersStore.loadOrderBook('MTH', 1, profileStore.profile.id);
 });
 
 </script>
