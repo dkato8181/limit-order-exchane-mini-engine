@@ -8,6 +8,7 @@ class Asset extends Model
 {
     protected $fillable = [
         'user_id',
+        'symbol',
         'type',
         'amount',
     ];

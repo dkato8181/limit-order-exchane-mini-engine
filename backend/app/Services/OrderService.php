@@ -126,6 +126,13 @@ class OrderService
             $sellOrder = Order::lockForUpdate()->find($sellOrder->id);
 
             $buyerAsset = $buyOrder->user->assets()->where('symbol', $buyOrder->symbol)->lockForUpdate()->first();
+            if(is_null($buyerAsset)) {
+                $buyerAsset = $buyOrder->user->assets()->create([
+                    'symbol' => $buyOrder->symbol,
+                    'amount' => 0,
+                    'locked_amount' => 0,
+                ]);
+            }
             $buyerAsset->amount = bcadd($buyerAsset->amount, $tradeAmount);
             $buyerAsset->save();
 
