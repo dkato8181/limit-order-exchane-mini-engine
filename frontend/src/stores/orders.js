@@ -19,16 +19,16 @@ export const useOrdersStore = defineStore('orders', () => {
   async function loadOrders() {
     const response = await api.get('/api/orders');
     console.log("Orders response:", response);
-    if (response.status === 200) {
-      orders.value = response.data.orders;
+    if (response.data.success) {
+      orders.value = response.data.data;
     }
   }
 
   async function loadOrderBook(symbol, status=1) {
     const response = await api.get('/api/orders', { params: { symbol:symbol, status: status } });
     console.log("Order book response:", response);
-    if (response.status === 200) {
-      orderBook.value = response.data.orders;
+    if (response.data.success) {
+      orderBook.value = response.data.data;
     }
   }
 
@@ -39,7 +39,7 @@ export const useOrdersStore = defineStore('orders', () => {
       fieldErrors.value = {};
       const response = await api.post('/api/orders', orderData);
       console.log("Place order response:", response);
-      if (response.status === 200) {
+      if (response.data.success) {
         console.log("Order placed successfully");
       }
     }

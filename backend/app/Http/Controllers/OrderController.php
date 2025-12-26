@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\OrderMatched;
 use App\Http\Requests\StoreOrderRequest;
+use App\Http\Resources\OrderResource;
 use App\Models\Asset;
 use App\Models\Order;
 use App\Models\Trade;
@@ -31,8 +32,9 @@ class OrderController extends Controller
                     ->get();
 
         return response()->json([
-            'orders' => $orders,
-        ]);
+            'success' => true,
+            'data' => OrderResource::collection($orders),
+        ], 200);
     }
 
     public function store(StoreOrderRequest $request, OrderService $orderService)
@@ -41,6 +43,7 @@ class OrderController extends Controller
             $orderService->canPlaceOrder($request->user(), $request->all());
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'message' => $e->getMessage(),
             ], 400);
         }
@@ -49,14 +52,16 @@ class OrderController extends Controller
 
         if(!$order) {
             return response()->json([
+                'success' => false,
                 'message' => 'Failed to place order',
             ], 500);
         }
 
         return response()->json([
-            'message' => 'Order cancelled successfully',
-            'order' => $order,
-        ]);
+            'success' => true,
+            'message' => 'Order created successfully',
+            'data' => new OrderResource($order),
+        ], 201);
     }
 
     public function cancel(Request $request, $id, OrderService $orderService)
@@ -67,27 +72,30 @@ class OrderController extends Controller
 
         if(is_null($order)) {
             return response()->json([
+                'success' => false,
                 'message' => 'Order not found',
-            ], 400);
+            ], 404);
         }
 
         if($order->status->value !== OrderStatus::OPEN->value) {
             return response()->json([
+                'success' => false,
                 'message' => 'Only open orders can be cancelled',
-            ], 400);
+            ], 403);
         }
 
         $orderCancelled = $orderService->cancelOrder($request->user(), $order);
 
         if(!$orderCancelled) {
             return response()->json([
+                'success' => false,
                 'message' => 'Failed to cancel order',
             ], 500);
         }
 
         return response()->json([
+            'success' => true,
             'message' => 'Order cancelled successfully',
-            'order' => $order,
         ]);
     }
 
