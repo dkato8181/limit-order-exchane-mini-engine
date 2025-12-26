@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Order;
 use App\Models\User;
+use App\OrderStatus;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -88,11 +90,66 @@ class DatabaseSeeder extends Seeder
                 ]
             ]
         ];
+        $orders = [
+            [
+                [
+                    'symbol' => 'BTC',
+                    'side' => 'buy',
+                    'amount' => 0.5,
+                    'price' => 30000.0,
+                    'status' => OrderStatus::OPEN,
+                ],
+                [
+                    'symbol' => 'ETH',
+                    'side' => 'sell',
+                    'amount' => 2.0,
+                    'price' => 2000.0,
+                    'status' => OrderStatus::OPEN,
+                ]
+                ],
+                [
+                    [
+                        'symbol' => 'MTH',
+                        'side' => 'buy',
+                        'amount' => 1.5,
+                        'price' => 10.0,
+                        'status' => OrderStatus::OPEN,
+                    ],
+                    [
+                        'symbol' => 'LTC',
+                        'side' => 'sell',
+                        'amount' => 5.0,
+                        'price' => 150.0,
+                        'status' => OrderStatus::OPEN,
+                    ]
+                ],
+                [
+                    [
+                        'symbol' => 'XRP',
+                        'side' => 'buy',
+                        'amount' => 50.0,
+                        'price' => 0.5,
+                        'status' => OrderStatus::OPEN,
+                    ],
+                    [
+                        'symbol' => 'BTC',
+                        'side' => 'sell',
+                        'amount' => 0.2,
+                        'price' => 32000.0,
+                        'status' => OrderStatus::OPEN,
+                    ]
+                ]
+        ];
 
         foreach ($data as $index => $userData) {
             $user = User::factory()->create($userData);
             foreach ($assets[$index] as $assetData) {
                 $user->assets()->create($assetData);
+            }
+            # create orders for user
+            foreach ($orders[$index] as $orderData) {
+                $orderData['user_id'] = $user->id;
+                Order::create($orderData);
             }
         }
     }
