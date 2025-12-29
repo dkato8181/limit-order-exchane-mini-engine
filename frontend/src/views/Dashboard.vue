@@ -42,15 +42,23 @@
 import { onMounted } from 'vue';
 import { useProfileStore } from '@/stores/profile';
 import { useOrdersStore } from '@/stores/orders';
+import { useEchoPublic } from '@laravel/echo-vue';
 
 const ordersStore = useOrdersStore();
 const profileStore = useProfileStore();
+
 onMounted(async () => {
   document.title = 'Dashboard - LOEME';
   await ordersStore.loadOrders();
   if (profileStore.profile?.id) {
     await ordersStore.loadOrderBook('MTH', 1, profileStore.profile.id);
   }
+});
+useEchoPublic(
+  'orders',
+  '.order.matched',
+    (e) => {
+    console.log('Order Matched event received on .order.matched:', e);
 });
 
 </script>
