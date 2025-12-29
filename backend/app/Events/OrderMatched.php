@@ -30,7 +30,9 @@ class OrderMatched implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel("orders"),
+            //new Channel("orders"),
+            new PrivateChannel("orders.user.{$this->trade->buyOrder->user_id}"),
+            new PrivateChannel("orders.user.{$this->trade->sellOrder->user_id}"),
         ];
     }
 

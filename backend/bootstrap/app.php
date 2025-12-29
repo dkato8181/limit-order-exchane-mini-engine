@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
     })
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['middleware' => ['web', 'auth']], // Add middleware here
+    )
     ->withExceptions(function (Exceptions $exceptions): void {
         // Validation errors
         $exceptions->render(function (ValidationException $e, Request $request) {

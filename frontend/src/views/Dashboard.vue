@@ -42,7 +42,7 @@
 import { onMounted } from 'vue';
 import { useProfileStore } from '@/stores/profile';
 import { useOrdersStore } from '@/stores/orders';
-import { useEchoPublic } from '@laravel/echo-vue';
+import { useEcho } from '@laravel/echo-vue';
 
 const ordersStore = useOrdersStore();
 const profileStore = useProfileStore();
@@ -54,8 +54,8 @@ onMounted(async () => {
     await ordersStore.loadOrderBook('MTH', 1, profileStore.profile.id);
   }
 });
-useEchoPublic(
-  'orders',
+useEcho(
+  `orders.user.${profileStore.profile.id}`,
   '.order.matched',
     (data) => {
     console.log('Order Matched event received on .order.matched:', data);
