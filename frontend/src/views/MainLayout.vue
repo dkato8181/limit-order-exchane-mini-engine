@@ -15,7 +15,7 @@
       </div>
       <div>
         <span class="text-2xl font-bold mr-2">{{ profileStore.profile.name }}</span>
-        <button class="h-full text-white rounded-2xl px-5 bg-blue-700">
+        <button @click="hanleLogout" class="h-full text-white rounded-2xl px-5 bg-blue-700">
           Logout
         </button>
       </div>
@@ -26,10 +26,19 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useProfileStore } from '@/stores/profile';
+import { useAuthStore } from '@/stores/auth';
 
+const authStore = useAuthStore();
 const profileStore = useProfileStore();
 onMounted(async () => {
   await profileStore.loadProfile();
 });
+
+const hanleLogout = async () => {
+  await authStore.logout();
+  if (!authStore.isAuthenticated()) {
+    router.push('/login')
+  }
+};
 
 </script>

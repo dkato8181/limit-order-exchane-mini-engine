@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('auth_token', response.data.access_token);
       localStorage.setItem('token_type', response.data.token_type);
       console.log("Token stored:", localStorage.getItem('auth_token'));
-      window.location.href = '/dashboard';
+      //window.location.href = '/dashboard';
     }
   }
 
@@ -27,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     const response = await api.post('/api/logout')
+    console.log("Logout response:", response)
     localStorage.removeItem('auth_token');
     localStorage.removeItem('token_type');
   }

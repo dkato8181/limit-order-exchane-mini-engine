@@ -51,14 +51,16 @@ async function handleLogin() {
     loading.value = true
     
     await authStore.login()
-    
-    router.push('/dashboard')
   } catch (err) {
     console.log(err);
     
     error.value = err.errors?.email?.[0] || err.message || 'Login failed. Please check your credentials.'
   } finally {
     loading.value = false
+  }
+
+  if (authStore.isAuthenticated()) {
+    router.push('/dashboard')
   }
 }
 </script>
