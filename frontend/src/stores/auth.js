@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { reactive } from 'vue';
 import api from '@/api/axios'
+import router from '@/router';
 
 export const useAuthStore = defineStore('auth', () => {
   const credentials = reactive({
@@ -26,10 +27,28 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    const response = await api.post('/api/logout')
-    console.log("Logout response:", response)
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('token_type');
+    try {
+      const response = await api.post('/api/logout')
+      console.log("Logout response:", response)
+    } catch (error) {
+      console.error('Logout error:', error);
+      if (error.response?.status === 419) {
+        // CSRF expired/missing — try once more
+        try {
+          await api.get('/sanctum/csrf-cookie');
+          await api.post('/api/logout');
+        } catch (e) {
+          console.error('Logout retry failed:', e);
+        }
+      }
+      if (error.response?.status === 401) {
+        console.warn('Logout returned 401 — clearing token');
+      }
+    } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token_type');
+      router.push('/login');
+    }
   }
 
   return {
