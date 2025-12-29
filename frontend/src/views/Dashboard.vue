@@ -57,8 +57,12 @@ onMounted(async () => {
 useEchoPublic(
   'orders',
   '.order.matched',
-    (e) => {
-    console.log('Order Matched event received on .order.matched:', e);
+    (data) => {
+    console.log('Order Matched event received on .order.matched:', data);
+    const trade = data.find(userData => userData.user_id === profileStore.profile.id);
+    if (trade) {
+      profileStore.profile.balance = trade.balance;
+    }
 });
 
 </script>

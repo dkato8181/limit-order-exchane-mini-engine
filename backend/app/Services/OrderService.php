@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\OrderMatched;
 use App\Models\Order;
 use App\Models\Trade;
 use App\Models\User;
@@ -50,7 +51,11 @@ class OrderService
             }
             $order = Order::create($order);
             DB::commit();
-            $this->matchOrders($order);
+            $trade = $this->matchOrders($order);
+            if($trade!==false) {
+                $data = $trade->load(['buyOrder.user.assets', 'sellOrder.user.assets']);
+                OrderMatched::dispatch($data);
+            }
             return $order;
         } catch (Exception $e) {
             Log::error('Order creation failed: ' . $e->getMessage());
@@ -87,7 +92,7 @@ class OrderService
     }
 
 
-    private function matchOrders(Order $newOrder)
+    private function matchOrders(Order $newOrder): bool|Trade
     {
         $existingOrder = Order::query()
                             ->where('symbol', $newOrder->symbol)
@@ -107,7 +112,7 @@ class OrderService
                             ->first();
 
         if (is_null($existingOrder)) {
-            return;
+            return false;
         }
 
         $buyOrder = $newOrder->side === 'buy' ? $newOrder : $existingOrder;
@@ -115,10 +120,10 @@ class OrderService
 
         $tradePrice = $newOrder->side === 'buy' ? min($newOrder->price, $existingOrder->price) : max($newOrder->price, $existingOrder->price);
 
-        $this->settleOrder($buyOrder, $sellOrder, $tradePrice, $newOrder->amount);
+        return $this->settleOrder($buyOrder, $sellOrder, $tradePrice, $newOrder->amount);
     }
 
-    private function settleOrder(Order $buyOrder, Order $sellOrder, string $tradePrice, string $tradeAmount)
+    private function settleOrder(Order $buyOrder, Order $sellOrder, string $tradePrice, string $tradeAmount): bool|Trade
     {
         DB::beginTransaction();
         try {
@@ -152,7 +157,7 @@ class OrderService
             $buyOrder->save();
             $sellOrder->save();
 
-            Trade::create([
+            $trade = Trade::create([
                 'buy_order_id' => $buyOrder->id,
                 'sell_order_id' => $sellOrder->id,
                 'price' => $tradePrice,
@@ -161,12 +166,13 @@ class OrderService
             ]);
 
             DB::commit();
+            return $trade;
         }
         catch (\Exception $e) {
             DB::rollBack();
             Log::error('Trade matching failed: ' . $e->getMessage());
         }
 
-        return;
+        return false;
     }
 }
