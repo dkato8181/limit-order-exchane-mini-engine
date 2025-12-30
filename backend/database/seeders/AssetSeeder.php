@@ -14,58 +14,12 @@ class AssetSeeder extends Seeder
      */
     public function run(): void
     {
-        $assets = [
-            [
-                [
-                    'symbol'=>'BTC',
-                    'amount'=>2.5,
-                ],
-                [
-                    'symbol'=>'ETH',
-                    'amount'=>10,
-                ],
-                [
-                    'symbol'=>'LTC',
-                    'amount'=>20,
-                ],
-                [
-                    'symbol'=>'XRP',
-                    'amount'=>500,
-                ]
-            ],
-            [
-                [
-                    'symbol'=>'ATC',
-                    'amount'=>1.0,
-                ],
-                [
-                    'symbol'=>'MTH',
-                    'amount'=>5,
-                ],
-                [
-                    'symbol'=>'LTC',
-                    'amount'=>15,
-                ],
-                [
-                    'symbol'=>'XRP',
-                    'amount'=>300,
-                ]
-            ],
-            [
-                [
-                    'symbol'=>'BTC',
-                    'amount'=>0.5,
-                ],
-                [
-                    'symbol'=>'MSH',
-                    'amount'=>2,
-                ],
-                [
-                    'symbol'=>'XRP',
-                    'amount'=>100,
-                ]
-            ]
-        ];
+        $jsonPath = base_path('seed_data.json');
+        if (!file_exists($jsonPath)) {
+            throw new \RuntimeException("Seed data file not found: {$jsonPath}");
+        }
+        $data = json_decode(file_get_contents($jsonPath), true);
+        $assets = $data['assets'] ?? [];
 
         $users = User::take(3)->get();
         foreach ($users as $index => $user) {

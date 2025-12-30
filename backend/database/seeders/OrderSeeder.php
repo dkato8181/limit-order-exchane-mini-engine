@@ -15,56 +15,12 @@ class OrderSeeder extends Seeder
      */
     public function run(): void
     {
-        $orders = [
-            [
-                [
-                    'symbol' => 'BTC',
-                    'side' => 'buy',
-                    'amount' => 0.5,
-                    'price' => 30000.0,
-                    'status' => OrderStatus::OPEN,
-                ],
-                [
-                    'symbol' => 'ETH',
-                    'side' => 'sell',
-                    'amount' => 2.0,
-                    'price' => 2000.0,
-                    'status' => OrderStatus::OPEN,
-                ]
-                ],
-                [
-                    [
-                        'symbol' => 'MTH',
-                        'side' => 'buy',
-                        'amount' => 1.5,
-                        'price' => 10.0,
-                        'status' => OrderStatus::OPEN,
-                    ],
-                    [
-                        'symbol' => 'LTC',
-                        'side' => 'sell',
-                        'amount' => 5.0,
-                        'price' => 150.0,
-                        'status' => OrderStatus::OPEN,
-                    ]
-                ],
-                [
-                    [
-                        'symbol' => 'XRP',
-                        'side' => 'buy',
-                        'amount' => 50.0,
-                        'price' => 0.5,
-                        'status' => OrderStatus::OPEN,
-                    ],
-                    [
-                        'symbol' => 'BTC',
-                        'side' => 'sell',
-                        'amount' => 0.2,
-                        'price' => 32000.0,
-                        'status' => OrderStatus::OPEN,
-                    ]
-                ]
-        ];
+        $jsonPath = base_path('seed_data.json');
+        if (!file_exists($jsonPath)) {
+            throw new \RuntimeException("Seed data file not found: {$jsonPath}");
+        }
+        $data = json_decode(file_get_contents($jsonPath), true);
+        $orders = $data['orders'] ?? [];
 
         $users = User::take(3)->get();
 
@@ -72,6 +28,7 @@ class OrderSeeder extends Seeder
             $userOrder = collect($orders[$index]);
             $orderData = $userOrder->map(function ($order) use ($user) {
                 $order['user_id'] = $user->id;
+                $order['status'] = OrderStatus::OPEN;
                 $order['created_at'] = Carbon::now();
                 $order['updated_at'] = Carbon::now();
                 return $order;

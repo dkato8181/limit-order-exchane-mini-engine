@@ -1,0 +1,57 @@
+{
+  "users": [
+    {
+      "name": "Alice Naki",
+      "email": "alice@gmail.com",
+      "password": "password",
+      "balance": 10000
+    },
+    {
+      "name": "David Kato",
+      "email": "david@gmail.com",
+      "password": "password",
+      "balance": 15000
+    },
+    {
+      "name": "Charlie Stevens",
+      "email": "charlie@gmail.com",
+      "password": "password",
+      "balance": 5000
+    }
+  ],
+
+  "assets": [
+    [
+      { "symbol": "BTC", "amount": 2.5 },
+      { "symbol": "ETH", "amount": 10 },
+      { "symbol": "LTC", "amount": 20 },
+      { "symbol": "XRP", "amount": 500 }
+    ],
+    [
+      { "symbol": "ATC", "amount": 1.0 },
+      { "symbol": "MTH", "amount": 5 },
+      { "symbol": "LTC", "amount": 15 },
+      { "symbol": "XRP", "amount": 300 }
+    ],
+    [
+      { "symbol": "BTC", "amount": 0.5 },
+      { "symbol": "MSH", "amount": 2 },
+      { "symbol": "XRP", "amount": 100 }
+    ]
+  ],
+
+  "orders": [
+    [
+      { "symbol": "BTC", "side": "buy", "amount": 0.5, "price": 30000.0 },
+      { "symbol": "ETH", "side": "sell", "amount": 2.0, "price": 2000.0 }
+    ],
+    [
+      { "symbol": "MTH", "side": "buy", "amount": 1.5, "price": 10.0 },
+      { "symbol": "LTC", "side": "sell", "amount": 5.0, "price": 150.0 }
+    ],
+    [
+      { "symbol": "XRP", "side": "buy", "amount": 50.0, "price": 0.5 },
+      { "symbol": "BTC", "side": "sell", "amount": 0.2, "price": 32000.0 }
+    ]
+  ]
+}
