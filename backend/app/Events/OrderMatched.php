@@ -46,23 +46,13 @@ class OrderMatched implements ShouldBroadcast
                 'user_id' => $buyer->id,
                 'order_id' => $this->trade->buy_order_id,
                 'balance' => $buyer->balance,
-                'asset' => $buyer->assets->where('symbol', '==', $symbol)->map(function ($asset) {
-                    return [
-                        'symbol' => $asset->symbol,
-                        'amount' => $asset->amount,
-                    ];
-                })->toArray(),
+                'assets' => $buyer->assets->toArray(),
             ],
             [
                 'user_id' => $seller->id,
                 'order_id' => $this->trade->sell_order_id,
                 'balance' => $seller->balance,
-                'asset' => $seller->assets->where('symbol', '==', $symbol)->map(function ($asset) {
-                    return [
-                        'symbol' => $asset->symbol,
-                        'amount' => $asset->amount,
-                    ];
-                })->toArray(),
+                'assets' => $seller->assets->toArray(),
             ],
         ];
     }
