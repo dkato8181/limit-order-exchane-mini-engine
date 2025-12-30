@@ -41,7 +41,7 @@
               <label for="price">Price </label>
             </div>
             <div>
-              <input v-model="order.price" min="0" type="number" id="price" placeholder="price" class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded" required>
+              <input v-model="order.price" min="0" step="any" inputmode="decimal" type="number" id="price" placeholder="price" class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded" required>
               <div v-if="ordersStore.fieldErrors.price" class="text-red-600 text-sm mt-1">
                 {{ ordersStore.fieldErrors.price[0] }}
               </div>
@@ -51,7 +51,7 @@
               <label for="amount">Amount </label>
             </div>
             <div>
-              <input v-model="order.amount" min="0" type="number" id="amount" placeholder="amount" class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded" required>
+              <input v-model="order.amount" min="0" step="any" inputmode="decimal" type="number" id="amount" placeholder="amount" class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded" required>
               <div v-if="ordersStore.fieldErrors.amount" class="text-red-600 text-sm mt-1">
                 {{ ordersStore.fieldErrors.amount[0] }}
               </div>
