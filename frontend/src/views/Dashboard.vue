@@ -62,6 +62,15 @@ useEcho(
     const trade = data.find(userData => userData.user_id === profileStore.profile.id);
     if (trade) {
       profileStore.profile.balance = trade.balance;
+      profileStore.profile.assets = trade.assets;
+      const orderIndex = ordersStore.orders.findIndex(order => order.id === trade.order_id);
+      if (orderIndex !== -1) {
+        ordersStore.orders[orderIndex].status = 2;
+      }
+      const orderBookIndex = ordersStore.orderBook.findIndex(order => order.id === trade.order_id);
+      if (orderBookIndex !== -1) {
+        ordersStore.orderBook[orderBookIndex].status = 2;
+      }
     }
 });
 
