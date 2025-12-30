@@ -48,7 +48,9 @@ class OrderService
                 $asset = $lockedUser->assets()?->where('symbol', $orderData['symbol'])?->lockForUpdate()?->first();
                 $asset->locked_amount = bcadd($asset->locked_amount, $orderData['amount'], 8);
                 $asset->amount = bcsub($asset->amount, $orderData['amount'], 8);
+                $asset->save();
             }
+            $lockedUser->save();
             $order = Order::create($order);
             DB::commit();
             $trade = $this->matchOrders($order);
