@@ -23,13 +23,16 @@
     <router-view />
   </div>
 </template>
+
 <script setup>
 import { onMounted } from 'vue';
 import { useProfileStore } from '@/stores/profile';
 import { useAuthStore } from '@/stores/auth';
+import router from '@/router';
 
 const authStore = useAuthStore();
 const profileStore = useProfileStore();
+
 onMounted(async () => {
   await profileStore.loadProfile();
 });
