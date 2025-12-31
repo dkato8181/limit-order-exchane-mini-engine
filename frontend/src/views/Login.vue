@@ -14,7 +14,7 @@
     <div class="my-5">
       <label class="text-white">
         <input type="checkbox" v-model="remember" class="mr-2" />
-        Remember Me{{ remember }}
+        Remember Me
       </label>
     </div>
     <div v-if="error" class="text-red-500 mb-4">{{ error }}</div>
@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -41,6 +41,8 @@ const remember = ref(false)
 const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+//TODO use papasswordInputType to toggle input type
+const passwordInputType = computed(()=>showPassword.value?'text':'password')
 
 async function handleLogin() {
   try {
