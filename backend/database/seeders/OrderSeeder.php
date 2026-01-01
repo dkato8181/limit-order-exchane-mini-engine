@@ -4,16 +4,16 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\OrderStatus;
-use Carbon\Carbon;
+use App\Services\OrderService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
-    public function run(): void
+    public function run(OrderService $orderService): void
     {
         $jsonPath = base_path('seed_data.json');
         if (!file_exists($jsonPath)) {
@@ -29,11 +29,17 @@ class OrderSeeder extends Seeder
             $orderData = $userOrder->map(function ($order) use ($user) {
                 $order['user_id'] = $user->id;
                 $order['status'] = OrderStatus::OPEN;
-                $order['created_at'] = Carbon::now();
-                $order['updated_at'] = Carbon::now();
                 return $order;
             });
-            DB::table('orders')->insert($orderData->toArray());
+            foreach ($orderData as $data) {
+                try {
+                    $orderService->canPlaceOrder($data);
+                    $orderService->createOrder($data, false);
+                } catch (\Exception $e) {
+                    Log::error('Cannot place order for user '.$user->id.': '.$e->getMessage());
+                    continue;
+                }
+            }
         }
     }
 }

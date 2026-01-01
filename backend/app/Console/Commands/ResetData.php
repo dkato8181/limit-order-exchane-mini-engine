@@ -28,18 +28,7 @@ class ResetData extends Command
      */
     public function handle()
     {
-        Schema::disableForeignKeyConstraints();
-
-        try {
-            DB::table('trades')->truncate();
-            DB::table('orders')->truncate();
-            DB::table('assets')->truncate();
-        } finally {
-            Schema::enableForeignKeyConstraints();
-        }
-
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\AssetSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\OrderSeeder']);
+        $this->info('Reading seed data...');
 
         $jsonPath = base_path('seed_data.json');
 
@@ -64,6 +53,23 @@ class ResetData extends Command
                 $user->save();
             }
         }
+
+        $this->info('Emptying trades, orders and assets...');
+
+        Schema::disableForeignKeyConstraints();
+
+        try {
+            DB::table('trades')->truncate();
+            DB::table('orders')->truncate();
+            DB::table('assets')->truncate();
+        } finally {
+            Schema::enableForeignKeyConstraints();
+        }
+
+        $this->info('Seeding orders and assets...');
+
+        $this->call('db:seed', ['--class' => 'Database\\Seeders\\AssetSeeder']);
+        $this->call('db:seed', ['--class' => 'Database\\Seeders\\OrderSeeder']);
 
     }
 }

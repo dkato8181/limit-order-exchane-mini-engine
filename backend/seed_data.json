@@ -42,7 +42,7 @@
 
   "orders": [
     [
-      { "symbol": "BTC", "side": "buy", "amount": 0.5, "price": 30000.0 },
+      { "symbol": "BTC", "side": "buy", "amount": 0.5, "price": 300.0 },
       { "symbol": "ETH", "side": "sell", "amount": 2.0, "price": 2000.0 }
     ],
     [
@@ -51,7 +51,7 @@
     ],
     [
       { "symbol": "XRP", "side": "buy", "amount": 50.0, "price": 0.5 },
-      { "symbol": "BTC", "side": "sell", "amount": 0.2, "price": 32000.0 }
+      { "symbol": "BTC", "side": "sell", "amount": 0.2, "price": 320.0 }
     ]
   ]
 }
