@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
 import api from '@/api/axios'
 
 export const useOrdersStore = defineStore('orders', () => {
@@ -9,6 +9,20 @@ export const useOrdersStore = defineStore('orders', () => {
   const error = ref('');
   const fieldErrors = ref({});
   const availableAssets = ref([]);
+
+  const order = reactive({
+    side: 'buy',
+    symbol: '',
+    price: null,
+    amount: null,
+  });
+
+  function resetOrder() {
+    order.side = 'buy';
+    order.symbol = '';
+    order.price = null;
+    order.amount = null;
+  }
 
   async function loadAvailableAssets() {
     const response = await api.get('/api/available-assets');
@@ -41,6 +55,7 @@ export const useOrdersStore = defineStore('orders', () => {
       console.log("Place order response:", response);
       if (response.data.success) {
         console.log("Order placed successfully");
+        resetOrder();
       }
     }
     catch (err) {
@@ -65,6 +80,8 @@ export const useOrdersStore = defineStore('orders', () => {
     error,
     fieldErrors,
     availableAssets,
+    order,
+    resetOrder,
     loadAvailableAssets,
     loadOrders,
     loadOrderBook,

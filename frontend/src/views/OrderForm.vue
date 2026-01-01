@@ -17,14 +17,14 @@
                         </div>
                         <div class="">
                             <select
-                                v-model="order.symbol"
+                                v-model="ordersStore.order.symbol"
                                 id="symbol"
                                 class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded"
                                 required
                             >
                                 <option value="">-- Select --</option>
                                 <option
-                                    v-if="order.side === 'buy'"
+                                    v-if="ordersStore.order.side === 'buy'"
                                     v-for="symbol in ordersStore.availableAssets"
                                     :key="symbol"
                                     :value="symbol"
@@ -32,7 +32,7 @@
                                     {{ symbol }}
                                 </option>
                                 <option
-                                    v-if="order.side === 'sell'"
+                                    v-if="ordersStore.order.side === 'sell'"
                                     v-for="symbol in sellSymbols"
                                     :key="symbol"
                                     :value="symbol"
@@ -54,8 +54,7 @@
 
                         <div class="">
                             <select
-                                @change="sideChanged"
-                                v-model="order.side"
+                                v-model="ordersStore.order.side"
                                 id="side"
                                 class="w-2/5 outline-2 outline-red-500 ml-3 p-1 rounded"
                                 required
@@ -77,7 +76,7 @@
                         </div>
                         <div>
                             <input
-                                v-model="order.price"
+                                v-model="ordersStore.order.price"
                                 min="0"
                                 step="any"
                                 inputmode="decimal"
@@ -100,7 +99,7 @@
                         </div>
                         <div>
                             <input
-                                v-model="order.amount"
+                                v-model="ordersStore.order.amount"
                                 min="0"
                                 step="any"
                                 inputmode="decimal"
@@ -138,7 +137,7 @@
     </div>
 </template>
 <script setup>
-import { onMounted, reactive, computed } from "vue";
+import { onMounted, computed } from "vue";
 import { useProfileStore } from "@/stores/profile";
 import { useOrdersStore } from "@/stores/orders";
 
@@ -154,16 +153,9 @@ const sellSymbols = computed(
     () => profileStore.profile?.assets?.map((asset) => asset.symbol) || []
 );
 
-const order = reactive({
-    side: "buy",
-    symbol: "",
-    price: null,
-    amount: null,
-});
-
 async function placeOrder() {
-    console.log("Placing order:", order);
-    await ordersStore.placeOrder(order);
+    console.log("Placing order:", ordersStore.order);
+    await ordersStore.placeOrder(ordersStore.order);
     console.log(ordersStore.fieldErrors);
 }
 </script>
