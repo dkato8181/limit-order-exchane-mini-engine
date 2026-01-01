@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\OrderMatched;
+use App\Models\Asset;
 use App\Models\Order;
 use App\Models\Trade;
 use App\Models\User;
@@ -15,9 +16,10 @@ class OrderService
 {
     public static string $commisionRate = "1.5";
 
-    public function canPlaceOrder($user, $orderData)
+    public function canPlaceOrder($orderData)
     {
         $totalCost = $orderData['amount'] * $orderData['price'];
+        $user = User::find($orderData['user_id']);
         $assetAmount = $user->assets()->where('symbol', $orderData['symbol'])?->first()?->amount ?? 0;
         if ($orderData['side'] === 'buy' && $user->balance < $totalCost ) {
             throw new Exception('Insufficient balance to place buy order');
@@ -27,32 +29,30 @@ class OrderService
         }
     }
 
-    public function createOrder($user, $orderData): bool|Order
+    public function createOrder($orderData, $matchOrder = true): bool|Order
     {
-        $order = array_merge(
-                    [
-                        'user_id' => $user->id,
-                        'status' => OrderStatus::OPEN->value
-                    ],
-                    $orderData);
-
-        $totalCost = $orderData['amount'] * $orderData['price'];
-
         DB::beginTransaction();
 
         try {
-            $lockedUser = User::lockForUpdate()->find($user->id);
             if ($orderData['side'] === 'buy') {
+                $totalCost = $orderData['amount'] * $orderData['price'];
+                $lockedUser = User::lockForUpdate()->find($orderData['user_id']);
                 $lockedUser->balance = bcsub($lockedUser->balance, $totalCost, 8);
+                $lockedUser->save();
             } else if ($orderData['side'] === 'sell') {
-                $asset = $lockedUser->assets()?->where('symbol', $orderData['symbol'])?->lockForUpdate()?->first();
-                $asset->locked_amount = bcadd($asset->locked_amount, $orderData['amount'], 8);
-                $asset->amount = bcsub($asset->amount, $orderData['amount'], 8);
-                $asset->save();
+                $lockedAsset = Asset::lockForUpdate()
+                                    ->where('user_id', $orderData['user_id'])
+                                    ->where('symbol', $orderData['symbol'])
+                                    ->first();
+                $lockedAsset->locked_amount = bcadd($lockedAsset->locked_amount, $orderData['amount'], 8);
+                $lockedAsset->amount = bcsub($lockedAsset->amount, $orderData['amount'], 8);
+                $lockedAsset->save();
             }
-            $lockedUser->save();
-            $order = Order::create($order);
+            $order = Order::create($orderData);
             DB::commit();
+            if(!$matchOrder) {
+                return $order;
+            }
             $trade = $this->matchOrders($order);
             if($trade!==false) {
                 $data = $trade->load(['buyOrder.user.assets', 'sellOrder.user.assets']);
@@ -66,21 +66,26 @@ class OrderService
         }
     }
 
-    public function cancelOrder($user, $order): bool
+    public function cancelOrder($orderData): bool
     {
-        $totalCost = $order['amount'] * $order['price'];
-
         DB::beginTransaction();
 
         try {
-            $lockedUser = User::lockForUpdate()->find($user->id);
-            if ($order['side'] === 'buy') {
+            if ($orderData['side'] === 'buy') {
+                $totalCost = $orderData['amount'] * $orderData['price'];
+                $lockedUser = User::lockForUpdate()->find($orderData['user_id']);
                 $lockedUser->balance = bcadd($lockedUser->balance, $totalCost, 8);
-            } else if ($order['side'] === 'sell') {
-                $asset = $lockedUser->assets()?->where('symbol', $order['symbol'])?->lockForUpdate()?->first();
-                $asset->locked_amount = bcsub($asset->locked_amount, $order['amount'], 8);
-                $asset->amount = bcadd($asset->amount, $order['amount'], 8);
+                $lockedUser->save();
+            } else if ($orderData['side'] === 'sell') {
+                $lockedAsset = Asset::lockForUpdate()
+                                    ->where('user_id', $orderData['user_id'])
+                                    ->where('symbol', $orderData['symbol'])
+                                    ->first();
+                $lockedAsset->locked_amount = bcsub($lockedAsset->locked_amount, $orderData['amount'], 8);
+                $lockedAsset->amount = bcadd($lockedAsset->amount, $orderData['amount'], 8);
+                $lockedAsset->save();
             }
+            $order = Order::lockForUpdate()->find($orderData['id']);
             $order->status = OrderStatus::CANCELLED;
             $order->save();
             DB::commit();

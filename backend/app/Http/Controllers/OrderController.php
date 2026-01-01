@@ -39,8 +39,10 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request, OrderService $orderService)
     {
+        $orderData = array_merge($request->validated(), ['user_id' => $request->user()->id]);
+
         try {
-            $orderService->canPlaceOrder($request->user(), $request->all());
+            $orderService->canPlaceOrder($orderData);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -48,7 +50,7 @@ class OrderController extends Controller
             ], 400);
         }
 
-        $order = $orderService->createOrder($request->user(), $request->all());
+        $order = $orderService->createOrder($orderData);
 
         if(!$order) {
             return response()->json([
@@ -84,7 +86,7 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $orderCancelled = $orderService->cancelOrder($request->user(), $order);
+        $orderCancelled = $orderService->cancelOrder($order);
 
         if(!$orderCancelled) {
             return response()->json([
