@@ -67,28 +67,35 @@ onMounted(async () => {
     await ordersStore.loadOrders();
     if (profileStore.profile?.id) {
         await ordersStore.loadOrderBook("MTH", 1, profileStore.profile.id);
-    }
-});
-useEcho(`orders.user.${profileStore.profile.id}`, ".order.matched", (data) => {
-    console.log("Order Matched event received on .order.matched:", data);
-    const trade = data.find(
-        (userData) => userData.user_id === profileStore.profile.id
-    );
-    if (trade) {
-        profileStore.profile.balance = trade.balance;
-        profileStore.profile.assets = trade.assets;
-        const orderIndex = ordersStore.orders.findIndex(
-            (order) => order.id === trade.order_id
+        useEcho(
+            `orders.user.${profileStore.profile.id}`,
+            ".order.matched",
+            (data) => {
+                console.log(
+                    "Order Matched event received on .order.matched:",
+                    data
+                );
+                const trade = data.find(
+                    (userData) => userData.user_id === profileStore.profile.id
+                );
+                if (trade) {
+                    profileStore.profile.balance = trade.balance;
+                    profileStore.profile.assets = trade.assets;
+                    const orderIndex = ordersStore.orders.findIndex(
+                        (order) => order.id === trade.order_id
+                    );
+                    if (orderIndex !== -1) {
+                        ordersStore.orders[orderIndex].status = 2;
+                    }
+                    const orderBookIndex = ordersStore.orderBook.findIndex(
+                        (order) => order.id === trade.order_id
+                    );
+                    if (orderBookIndex !== -1) {
+                        ordersStore.orderBook[orderBookIndex].status = 2;
+                    }
+                }
+            }
         );
-        if (orderIndex !== -1) {
-            ordersStore.orders[orderIndex].status = 2;
-        }
-        const orderBookIndex = ordersStore.orderBook.findIndex(
-            (order) => order.id === trade.order_id
-        );
-        if (orderBookIndex !== -1) {
-            ordersStore.orderBook[orderBookIndex].status = 2;
-        }
     }
 });
 </script>
